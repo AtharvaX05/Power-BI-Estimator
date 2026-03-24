@@ -20,6 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "frontend" / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+@app.on_event("startup")
+async def startup_event():
+    logging.info("Starting Power BI Estimator app")
+    logging.info("Working dir: %s", BASE_DIR)
+    logging.info("Static dir: %s", STATIC_DIR)
+
 # Register route modules
 app.include_router(auth_router)
 app.include_router(projects_router)
