@@ -24,7 +24,14 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 async def startup_event():
     logging.info("Starting Power BI Estimator app")
     logging.info("Working dir: %s", BASE_DIR)
-    logging.info("Static dir: %s", STATIC_DIR)
+    logging.info("Static dir exists: %s (%s)", STATIC_DIR.exists(), STATIC_DIR)
+    
+    # Check templates dir
+    TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
+    logging.info("Templates dir exists: %s (%s)", TEMPLATES_DIR.exists(), TEMPLATES_DIR)
+    
+    if not TEMPLATES_DIR.exists():
+        logging.error("CRITICAL: Templates directory not found!")
 
 # Register route modules
 app.include_router(auth_router)
@@ -44,5 +51,8 @@ async def unauthorized_handler(request: Request, exc):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logging.exception("Unhandled exception for %s %s", request.method, request.url)
-    return PlainTextResponse("Internal Server Error", status_code=500)
+    import traceback
+    error_msg = f"Unhandled exception for {request.method} {request.url}\n\n{traceback.format_exc()}"
+    logging.error(error_msg)
+    # Returning error message in plain text for easier debugging in Vercel logs or browser
+    return PlainTextResponse(error_msg, status_code=500)
