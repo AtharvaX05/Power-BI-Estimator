@@ -1,10 +1,8 @@
 import logging
-import os
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
-from mangum import Mangum
+from fastapi.responses import RedirectResponse, PlainTextResponse
 
 from backend.routes.auth import router as auth_router
 from backend.routes.projects import router as projects_router
@@ -37,5 +35,8 @@ async def root():
 async def unauthorized_handler(request: Request, exc):
     return RedirectResponse(url="/login", status_code=303)
 
-# Vercel handler
-handler = Mangum(app)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.exception("Unhandled exception for %s %s", request.method, request.url)
+    return PlainTextResponse("Internal Server Error", status_code=500)
