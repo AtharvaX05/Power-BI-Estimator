@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Estimation — {{ project.name }}{% endblock %}
+
+{% block navbar %}
+<nav class="navbar">
+    <a href="/dashboard" class="brand">⚡ Power BI Estimator</a>
+    <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>New Estimation for {{ project.name }}</h1>
+        <p class="text-muted">Fill in the parameters below. A new version will be created.</p>
+    </div>
+
+    {% if error is defined and error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/projects/{{ project.id }}/estimate">
+
+        <!-- Project Metadata & Scoping -->
+        <div class="form-section">
+            <h4>📋 Project Metadata & Scoping</h4>
+            <div class="form-group">
+                <label for="scoping_hours">Scoping Hours</label>
+                <input type="number" id="scoping_hours" name="scoping_hours" value="4" min="0" max="100" step="0.5">
+                <small class="text-muted">Requirement gathering, stakeholder alignment, project planning</small>
+            </div>
+        </div>
+
+        <!-- Data Source Integration -->
+        <div class="form-section">
+            <h4>📊 Data Source Integration</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="num_data_sources">Number of Data Sources</label>
+                    <input type="number" id="num_data_sources" name="num_data_sources" value="2" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="data_source_types">Data Source Types (comma-separated)</label>
+                    <input type="text" id="data_source_types" name="data_source_types" value="database, excel" placeholder="database, api, excel, sharepoint">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="data_source_complexity">Data Source Complexity</label>
+                <select id="data_source_complexity" name="data_source_complexity">
+                    <option value="low">Low (×1)</option>
+                    <option value="medium" selected>Medium (×1.5)</option>
+                    <option value="high">High (×2.5)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Data Transformation -->
+        <div class="form-section">
+            <h4>🔄 Data Transformation (Power Query / ETL)</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="num_tables">Number of Tables</label>
+                    <input type="number" id="num_tables" name="num_tables" value="8" min="1" max="500">
+                </div>
+                <div class="form-group">
+                    <label for="transformation_complexity">Transformation Complexity</label>
+                    <select id="transformation_complexity" name="transformation_complexity">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Modeling -->
+        <div class="form-section">
+            <h4>🏗️ Data Modeling</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="num_data_models">Number of Data Models</label>
+                    <input type="number" id="num_data_models" name="num_data_models" value="1" min="1" max="50">
+                </div>
+                <div class="form-group">
+                    <label for="modeling_complexity">Modeling Complexity</label>
+                    <select id="modeling_complexity" name="modeling_complexity">
+                        <option value="low">Low (×1)</option>
+                        <option value="medium" selected>Medium (×1.75)</option>
+                        <option value="high">High (×3)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top:0.5rem;">
+                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="incremental_refresh" style="width:auto;">
+                    Incremental Refresh (+6h per model)
+                </label>
+            </div>
+        </div>
+
+        <!-- DAX / Business Logic -->
+        <div class="form-section">
+            <h4>🧮 DAX / Business Logic</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="num_measures">Number of DAX Measures</label>
+                    <input type="number" id="num_measures" name="num_measures" value="15" min="0" max="1000">
+                </div>
+                <div class="form-group">
+                    <label for="dax_complexity">DAX Complexity</label>
+                    <select id="dax_complexity" name="dax_complexity">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Development -->
+        <div class="form-section">
+            <h4>📈 Report Development (UI/UX)</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="num_reports">Number of Reports</label>
+                    <input type="number" id="num_reports" name="num_reports" value="2" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="pages_per_report">Pages per Report</label>
+                    <input type="number" id="pages_per_report" name="pages_per_report" value="5" min="1" max="50">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="report_complexity">Report Complexity</label>
+                <select id="report_complexity" name="report_complexity">
+                    <option value="low">Easy (×1)</option>
+                    <option value="medium" selected>Medium (×1.5)</option>
+                    <option value="high">Hard (×2.5)</option>
+                </select>
+            </div>
+            <p style="font-size:0.85rem; color: var(--text-muted); margin: 0.5rem 0 0.3rem;">Report Features (per report):</p>
+            <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+                <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.9rem;">
+                    <input type="checkbox" name="feature_tooltips" style="width:auto;"> Tooltips (+2h)
+                </label>
+                <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.9rem;">
+                    <input type="checkbox" name="feature_subscriptions" style="width:auto;"> Subscriptions (+1h)
+                </label>
+                <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.9rem;">
+                    <input type="checkbox" name="feature_alerts" style="width:auto;"> Alerts (+1h)
+                </label>
+            </div>
+            <div class="form-group" style="margin-top:0.5rem;">
+                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" name="ui_ux_designer" style="width:auto;">
+                    UI/UX Designer Contribution (1.2× on report effort)
+                </label>
+            </div>
+        </div>
+
+        <!-- Security (RLS) -->
+        <div class="form-section">
+            <h4>🔒 Security (Row-Level Security)</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="rls_required">RLS Required?</label>
+                    <select id="rls_required" name="rls_required">
+                        <option value="no" selected>No</option>
+                        <option value="yes">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="rls_complexity">RLS Complexity (if applicable)</label>
+                    <select id="rls_complexity" name="rls_complexity">
+                        <option value="low" selected>Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance -->
+        <div class="form-section">
+            <h4>⚡ Performance Optimization</h4>
+            <div class="form-group">
+                <label for="performance_level">Performance Optimization Level</label>
+                <select id="performance_level" name="performance_level">
+                    <option value="none" selected>None</option>
+                    <option value="standard">Standard (12h)</option>
+                    <option value="complex">Complex (20h)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Deployment -->
+        <div class="form-section">
+            <h4>🚀 Deployment</h4>
+            <div class="form-group">
+                <label for="deployment_hours">Deployment Hours</label>
+                <input type="number" id="deployment_hours" name="deployment_hours" value="8" min="0" max="100" step="0.5">
+                <small class="text-muted">Hours for deployment, configuration, and go-live</small>
+            </div>
+        </div>
+
+        <!-- UAT -->
+        <div class="form-section">
+            <h4>🧪 UAT & Iterations</h4>
+            <div class="form-group">
+                <label for="uat_cycles">Number of UAT Cycles</label>
+                <input type="number" id="uat_cycles" name="uat_cycles" value="2" min="1" max="20">
+            </div>
+        </div>
+
+        <!-- Documentation -->
+        <div class="form-section">
+            <h4>📄 Documentation & Handover</h4>
+            <div class="form-group">
+                <label for="documentation_required">Documentation Required?</label>
+                <select id="documentation_required" name="documentation_required">
+                    <option value="yes" selected>Yes (4h)</option>
+                    <option value="no">No</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Resource Overhead -->
+        <div class="form-section">
+            <h4>👥 Resource Overhead</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="tl_percentage">Team Lead Contribution (%)</label>
+                    <input type="number" id="tl_percentage" name="tl_percentage" value="10" min="0" max="100" step="1">
+                    <small class="text-muted">% of base effort for TL oversight</small>
+                </div>
+                <div class="form-group">
+                    <label for="ba_percentage">Business Analyst Contribution (%)</label>
+                    <input type="number" id="ba_percentage" name="ba_percentage" value="10" min="0" max="100" step="1">
+                    <small class="text-muted">% of base effort for BA support</small>
+                </div>
+                <div class="form-group">
+                    <label for="buffer_percentage">Buffer (%)</label>
+                    <input type="number" id="buffer_percentage" name="buffer_percentage" value="0" min="0" max="100" step="1">
+                    <small class="text-muted">Applied per module and rounded to nearest integer</small>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:0.8rem; font-size:1rem;">
+            Calculate Estimation
+        </button>
+    </form>
+</div>
+{% endblock %}

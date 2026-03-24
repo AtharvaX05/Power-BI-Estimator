@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}New Project — Power BI Estimator{% endblock %}
+
+{% block navbar %}
+<nav class="navbar">
+    <a href="/dashboard" class="brand">⚡ Power BI Estimator</a>
+    <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-narrow" style="margin-top:2rem;">
+    <div class="card">
+        <h2 style="color: var(--primary); margin-bottom: 1.2rem;">Create New Project</h2>
+
+        {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/projects/new">
+            <div class="form-group">
+                <label for="name">Project Name</label>
+                <input type="text" id="name" name="name" required placeholder="e.g. Sales Analytics Dashboard">
+            </div>
+            <div class="form-group">
+                <label for="client_name">Client Name</label>
+                <input type="text" id="client_name" name="client_name" required placeholder="e.g. Contoso Ltd.">
+            </div>
+            <div class="form-group">
+                <label for="description">Description (optional)</label>
+                <textarea id="description" name="description" rows="3" placeholder="Brief project description..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Create Project</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

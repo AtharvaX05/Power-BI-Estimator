@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Power BI Estimator{% endblock %}
+
+{% block navbar %}
+<nav class="navbar">
+    <a href="/dashboard" class="brand">⚡ Power BI Estimator</a>
+    <div class="nav-links">
+        <span style="color: rgba(255,255,255,0.7); font-size:0.85rem;">{{ user.name }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="flex-between page-header">
+        <h1>My Projects</h1>
+        <a href="/projects/new" class="btn btn-primary">+ New Project</a>
+    </div>
+
+    {% if projects|length == 0 %}
+    <div class="card text-center" style="padding: 3rem;">
+        <p class="text-muted" style="font-size:1.1rem;">No projects yet. Create your first project to get started!</p>
+        <a href="/projects/new" class="btn btn-primary mt-2">Create Project</a>
+    </div>
+    {% else %}
+        {% for p in projects %}
+        <div class="card">
+            <div class="flex-between">
+                <div>
+                    <h3><a href="/projects/{{ p.id }}">{{ p.name }}</a></h3>
+                    <div class="meta">
+                        Client: <strong>{{ p.client_name }}</strong>
+                        &nbsp;·&nbsp; Versions: <strong>{{ p.versions|length }}</strong>
+                        &nbsp;·&nbsp; Last updated: {{ p.updated_at.strftime('%b %d, %Y %H:%M') }}
+                    </div>
+                </div>
+                <div>
+                    {% if p.versions|length > 0 %}
+                    <span class="badge badge-primary">{{ p.versions[-1].outputs.total_effort_hours }}h / {{ p.versions[-1].outputs.total_effort_days }}d</span>
+                    {% else %}
+                    <span class="badge badge-warning">No estimate</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="actions">
+                <a href="/projects/{{ p.id }}" class="btn btn-outline btn-sm">View</a>
+                <a href="/projects/{{ p.id }}/estimate" class="btn btn-success btn-sm">New Estimate</a>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

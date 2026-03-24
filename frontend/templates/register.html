@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Register — Power BI Estimator{% endblock %}
+
+{% block content %}
+<div class="container-narrow" style="margin-top: 8vh;">
+    <div class="auth-card">
+        <h2>⚡ Create Account</h2>
+        <p class="text-center text-muted mb-2">Start estimating your Power BI projects</p>
+
+        {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/register">
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" required placeholder="Jane Doe">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="you@company.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required minlength="6" placeholder="Min 6 characters">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">Create Account</button>
+        </form>
+
+        <p class="footer-text">
+            Already have an account? <a href="/login">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

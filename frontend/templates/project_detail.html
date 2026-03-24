@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} — Power BI Estimator{% endblock %}
+
+{% block navbar %}
+<nav class="navbar">
+    <a href="/dashboard" class="brand">⚡ Power BI Estimator</a>
+    <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <div class="flex-between">
+            <div>
+                <h1>{{ project.name }}</h1>
+                <p class="text-muted">
+                    Client: <strong>{{ project.client_name }}</strong>
+                    &nbsp;·&nbsp; Created: {{ project.created_at.strftime('%b %d, %Y') }}
+                </p>
+                {% if project.description %}
+                <p class="mt-1">{{ project.description }}</p>
+                {% endif %}
+            </div>
+            <a href="/projects/{{ project.id }}/estimate" class="btn btn-success">+ New Estimation</a>
+        </div>
+    </div>
+
+    {% if project.versions|length > 0 %}
+    <!-- Latest version summary -->
+    {% set latest = project.versions[-1] %}
+    <div class="effort-summary">
+        <div class="stat">
+            <div class="value">{{ latest.outputs.total_effort_hours }}</div>
+            <div class="label">Total Effort (hours)</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ latest.outputs.total_effort_days }}</div>
+            <div class="label">Total Effort (days)</div>
+        </div>
+        <div class="stat">
+            <div class="value">v{{ latest.version_number }}</div>
+            <div class="label">Latest Version</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ latest.outputs.confidence_level }}</div>
+            <div class="label">Confidence</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ latest.outputs.module_breakdown|length }}</div>
+            <div class="label">Modules</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Version history -->
+    <div class="card">
+        <h3 style="margin-bottom:1rem;">Version History</h3>
+
+        {% if project.versions|length == 0 %}
+        <p class="text-muted">No estimations yet. Click "New Estimation" to create the first version.</p>
+        {% else %}
+        <ul class="version-list">
+            {% for v in project.versions|reverse %}
+            <li>
+                <div>
+                    <strong>Version {{ v.version_number }}</strong>
+                    <span class="text-muted" style="margin-left:0.5rem;">{{ v.timestamp.strftime('%b %d, %Y %H:%M') }}</span>
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <span class="badge badge-primary">{{ v.outputs.total_effort_hours }}h / {{ v.outputs.total_effort_days }}d</span>
+                    <a href="/projects/{{ project.id }}/versions/{{ v.version_id }}" class="btn btn-outline btn-sm">View</a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

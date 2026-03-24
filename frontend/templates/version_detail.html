@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+
+{% block title %}Version {{ version.version_number }} — {{ project.name }}{% endblock %}
+
+{% block navbar %}
+<nav class="navbar">
+    <a href="/dashboard" class="brand">⚡ Power BI Estimator</a>
+    <div class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+        <a href="/logout">Logout</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <div class="flex-between">
+            <div>
+                <h1>{{ project.name }} — Version {{ version.version_number }}</h1>
+                <p class="text-muted">
+                    Created: {{ version.timestamp.strftime('%b %d, %Y %H:%M UTC') }}
+                    &nbsp;·&nbsp; Client: <strong>{{ project.client_name }}</strong>
+                </p>
+            </div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <a id="linkExportExcel" href="/projects/{{ project.id }}/versions/{{ version.version_id }}/export/excel"
+                   class="btn btn-success btn-sm">📥 Excel</a>
+                <a id="linkExportPdf" href="/projects/{{ project.id }}/versions/{{ version.version_id }}/export/pdf"
+                   class="btn btn-primary btn-sm">📄 PDF</a>
+                <button onclick="exportCostExcel()" class="btn btn-success btn-sm" id="btnExportCostExcel" style="display:none;">📥 Excel + Cost</button>
+                <button onclick="exportCostPdf()" class="btn btn-primary btn-sm" id="btnExportCostPdf" style="display:none;">📄 PDF + Cost</button>
+                <a href="/projects/{{ project.id }}/estimate"
+                   class="btn btn-outline btn-sm">+ New Version</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="effort-summary">
+        <div class="stat">
+            <div class="value">{{ version.outputs.total_effort_hours }}</div>
+            <div class="label">Total Effort (hours)</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ version.outputs.total_effort_days }}</div>
+            <div class="label">Total Effort (days)</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ version.outputs.confidence_level }}</div>
+            <div class="label">Confidence Level</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ version.outputs.module_breakdown|length }}</div>
+            <div class="label">Modules Assessed</div>
+        </div>
+    </div>
+
+    {% if version.outputs.total_buffer_percentage > 0 %}
+    <div class="card" style="background: #e8f5e9; border-color: #a5d6a7;">
+        <strong>Total Buffer: {{ version.outputs.total_buffer_percentage }}%</strong>
+        (TL {{ version.outputs.tl_percentage }}% + BA {{ version.outputs.ba_percentage }}%{% if version.outputs.buffer_percentage > 0 %} + Buffer {{ version.outputs.buffer_percentage }}%{% endif %})
+        &nbsp;·&nbsp; Base: {{ version.outputs.base_effort_hours }}h → Total: {{ version.outputs.total_effort_hours }}h
+    </div>
+    {% endif %}
+
+    <!-- Confidence note -->
+    <div class="card" style="background: #fffde7; border-color: #ffe082;">
+        <strong>Confidence:</strong> {{ version.outputs.confidence_level }} — {{ version.outputs.confidence_reason }}
+    </div>
+
+    <!-- Module breakdown table -->
+    <div class="card">
+        <h3 style="margin-bottom:1rem;">Module-wise Effort Breakdown</h3>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Module</th>
+                        <th>Base (hours)</th>
+                        <th>Multiplier</th>
+                        <th>Effort (hours)</th>
+                        <th>Effort (days)</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in version.outputs.module_breakdown %}
+                    <tr>
+                        <td><strong>{{ m.module_name }}</strong></td>
+                        <td>{{ m.base_effort_hours }}</td>
+                        <td>{{ m.complexity_multiplier }}x</td>
+                        <td><strong>{{ m.computed_effort_hours }}</strong></td>
+                        <td>{{ (m.computed_effort_hours / 8)|round(1) }}</td>
+                        <td class="text-muted">{{ m.notes }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr style="background: #d4e6fd; font-weight: 700;">
+                        <td>TOTAL</td>
+                        <td></td>
+                        <td></td>
+                        <td>{{ version.outputs.total_effort_hours }}</td>
+                        <td>{{ version.outputs.total_effort_days }}</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Input parameters used -->
+    <div class="card">
+        <h3 style="margin-bottom:1rem;">Input Parameters</h3>
+        <div class="table-wrapper">
+            <table>
+                <tbody>
+                    <tr><td><strong>Scoping Hours</strong></td><td>{{ version.inputs.scoping_hours }}</td></tr>
+                    <tr><td><strong>Data Sources</strong></td><td>{{ version.inputs.num_data_sources }}</td></tr>
+                    <tr><td><strong>Source Types</strong></td><td>{{ version.inputs.data_source_types | join(', ') }}</td></tr>
+                    <tr><td><strong>Data Source Complexity</strong></td><td>{{ version.inputs.data_source_complexity.value | title }}</td></tr>
+                    <tr><td><strong>Tables</strong></td><td>{{ version.inputs.num_tables }}</td></tr>
+                    <tr><td><strong>Transformation Complexity</strong></td><td>{{ version.inputs.transformation_complexity.value | title }}</td></tr>
+                    <tr><td><strong>Data Models</strong></td><td>{{ version.inputs.num_data_models }}</td></tr>
+                    <tr><td><strong>Modeling Complexity</strong></td><td>{{ version.inputs.modeling_complexity.value | title }}</td></tr>
+                    <tr><td><strong>Incremental Refresh</strong></td><td>{{ "Yes" if version.inputs.incremental_refresh else "No" }}</td></tr>
+                    <tr><td><strong>DAX Measures</strong></td><td>{{ version.inputs.num_measures }}</td></tr>
+                    <tr><td><strong>DAX Complexity</strong></td><td>{{ version.inputs.dax_complexity.value | title }}</td></tr>
+                    <tr><td><strong>Reports</strong></td><td>{{ version.inputs.num_reports }}</td></tr>
+                    <tr><td><strong>Pages / Report</strong></td><td>{{ version.inputs.pages_per_report }}</td></tr>
+                    <tr><td><strong>Report Complexity</strong></td><td>{{ version.inputs.report_complexity.value | title }}</td></tr>
+                    <tr><td><strong>Tooltips</strong></td><td>{{ "Yes" if version.inputs.feature_tooltips else "No" }}</td></tr>
+                    <tr><td><strong>Subscriptions</strong></td><td>{{ "Yes" if version.inputs.feature_subscriptions else "No" }}</td></tr>
+                    <tr><td><strong>Alerts</strong></td><td>{{ "Yes" if version.inputs.feature_alerts else "No" }}</td></tr>
+                    <tr><td><strong>UI/UX Designer</strong></td><td>{{ "Yes" if version.inputs.ui_ux_designer else "No" }}</td></tr>
+                    <tr><td><strong>RLS Required</strong></td><td>{{ "Yes" if version.inputs.rls_required else "No" }}</td></tr>
+                    <tr><td><strong>Performance Level</strong></td><td>{{ version.inputs.performance_level.value | title }}</td></tr>
+                    <tr><td><strong>UAT Cycles</strong></td><td>{{ version.inputs.uat_cycles }}</td></tr>
+                    <tr><td><strong>Deployment Hours</strong></td><td>{{ version.inputs.deployment_hours }}</td></tr>
+                    <tr><td><strong>Documentation</strong></td><td>{{ "Yes" if version.inputs.documentation_required else "No" }}</td></tr>
+                    <tr><td><strong>Team Lead %</strong></td><td>{{ version.inputs.tl_percentage }}%</td></tr>
+                    <tr><td><strong>Business Analyst %</strong></td><td>{{ version.inputs.ba_percentage }}%</td></tr>
+                    <tr><td><strong>Buffer %</strong></td><td>{{ version.inputs.buffer_percentage }}%</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Assumptions -->
+    <div class="card">
+        <h3 style="margin-bottom:1rem;">Assumptions</h3>
+        <ol style="padding-left:1.2rem;">
+            {% for a in version.outputs.assumptions %}
+            <li style="margin-bottom:0.4rem;">{{ a }}</li>
+            {% endfor %}
+        </ol>
+    </div>
+
+    <!-- Cost Estimation Module -->
+    <div class="card">
+        <h3 style="margin-bottom:1rem;">💰 Cost Estimation</h3>
+        <p class="text-muted" style="margin-bottom:0.8rem;">
+            Define roles, effort allocation, and hourly rates. Total % must equal 100%.
+            Uses total: <strong>{{ version.outputs.total_effort_hours }} hours</strong>.
+        </p>
+
+        <!-- Currency selector -->
+        <div class="form-group" style="margin-bottom:1rem; max-width:200px;">
+            <label for="currencySelect"><strong>Currency</strong></label>
+            <select id="currencySelect" style="width:100%; padding:0.4rem;">
+                <option value="₹" selected>INR (₹)</option>
+                <option value="$">USD ($)</option>
+                <option value="€">EUR (€)</option>
+            </select>
+        </div>
+
+        <!-- Role input table -->
+        <div class="table-wrapper">
+            <table id="costInputTable">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>% Efforts</th>
+                        <th>Rate/hr</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="costRolesBody">
+                    <tr>
+                        <td><input type="text" class="cost-role" value="BI Developer" style="width:100%;"></td>
+                        <td><input type="number" class="cost-pct" value="50" min="0" max="100" step="1" style="width:80px;"></td>
+                        <td><input type="number" class="cost-rate" value="75" min="0" step="0.01" style="width:100px;"></td>
+                        <td><button type="button" class="btn btn-sm" onclick="removeRole(this)" style="color:#c00;padding:2px 8px;">✕</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="text" class="cost-role" value="Data Engineer" style="width:100%;"></td>
+                        <td><input type="number" class="cost-pct" value="30" min="0" max="100" step="1" style="width:80px;"></td>
+                        <td><input type="number" class="cost-rate" value="80" min="0" step="0.01" style="width:100px;"></td>
+                        <td><button type="button" class="btn btn-sm" onclick="removeRole(this)" style="color:#c00;padding:2px 8px;">✕</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="text" class="cost-role" value="QA" style="width:100%;"></td>
+                        <td><input type="number" class="cost-pct" value="20" min="0" max="100" step="1" style="width:80px;"></td>
+                        <td><input type="number" class="cost-rate" value="60" min="0" step="0.01" style="width:100px;"></td>
+                        <td><button type="button" class="btn btn-sm" onclick="removeRole(this)" style="color:#c00;padding:2px 8px;">✕</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:1rem; margin:0.8rem 0;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="addRole()">+ Add Role</button>
+            <span id="pctTotal" style="font-weight:600;"></span>
+            <span id="pctError" style="color:#c00; font-size:0.85rem;"></span>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="calculateCost()" style="padding:0.6rem 2rem;">
+            Calculate Cost
+        </button>
+
+        <!-- Cost output (hidden until calculated) -->
+        <div id="costOutputSection" style="display:none; margin-top:1.5rem;">
+            <h4 style="margin-bottom:0.8rem;">Cost Breakdown</h4>
+            <div class="table-wrapper">
+                <table id="costOutputTable">
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>% Efforts</th>
+                            <th>Hours</th>
+                            <th id="costHeaderRate">Rate/hr</th>
+                            <th id="costHeaderCost">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody id="costOutputBody"></tbody>
+                    <tfoot>
+                        <tr style="background: #e3ecfa; font-weight:700;">
+                            <td>TOTAL</td>
+                            <td>100%</td>
+                            <td id="costTotalHours"></td>
+                            <td></td>
+                            <td id="costTotalCost"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div style="margin-top:0.8rem;">
+                <strong>Total Effort:</strong> {{ version.outputs.total_effort_hours }} hours ({{ version.outputs.total_effort_days }} days)<br>
+                <strong>Total Cost:</strong> <span id="costTotalDisplay"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-3 mb-3">
+        <a href="/projects/{{ project.id }}" class="btn btn-outline">← Back to Project</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TOTAL_HOURS = {{ version.outputs.total_effort_hours }};
+const EXPORT_BASE = "/projects/{{ project.id }}/versions/{{ version.version_id }}/export";
+
+function getCurrency() {
+    return document.getElementById('currencySelect').value;
+}
+
+function addRole() {
+    const tbody = document.getElementById('costRolesBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="text" class="cost-role" value="" placeholder="Role name" style="width:100%;"></td>
+        <td><input type="number" class="cost-pct" value="0" min="0" max="100" step="1" style="width:80px;"></td>
+        <td><input type="number" class="cost-rate" value="0" min="0" step="0.01" style="width:100px;"></td>
+        <td><button type="button" class="btn btn-sm" onclick="removeRole(this)" style="color:#c00;padding:2px 8px;">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+    updatePctTotal();
+}
+
+function removeRole(btn) {
+    const tbody = document.getElementById('costRolesBody');
+    if (tbody.rows.length <= 1) return;
+    btn.closest('tr').remove();
+    updatePctTotal();
+}
+
+function updatePctTotal() {
+    const pcts = document.querySelectorAll('.cost-pct');
+    let sum = 0;
+    pcts.forEach(p => sum += parseFloat(p.value) || 0);
+    document.getElementById('pctTotal').textContent = 'Total: ' + sum + '%';
+    const err = document.getElementById('pctError');
+    if (Math.abs(sum - 100) > 0.01) {
+        err.textContent = '⚠ Must equal 100%';
+    } else {
+        err.textContent = '';
+    }
+}
+
+// Live update percentage total
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('cost-pct')) updatePctTotal();
+});
+updatePctTotal();
+
+function getRolesData() {
+    const rows = document.querySelectorAll('#costRolesBody tr');
+    const roles = [];
+    rows.forEach(row => {
+        const role = row.querySelector('.cost-role').value.trim();
+        const pct = parseFloat(row.querySelector('.cost-pct').value) || 0;
+        const rate = parseFloat(row.querySelector('.cost-rate').value) || 0;
+        if (role) {
+            roles.push({ role: role, percentage: pct, rate: rate });
+        }
+    });
+    return roles;
+}
+
+function calculateCost() {
+    const roles = getRolesData();
+    if (roles.length === 0) {
+        alert('Please add at least one role.');
+        return;
+    }
+
+    const totalPct = roles.reduce((s, r) => s + r.percentage, 0);
+    if (Math.abs(totalPct - 100) > 0.01) {
+        alert('Total % Efforts must equal 100%. Current: ' + totalPct + '%');
+        return;
+    }
+
+    // Validate no zero rates
+    for (const r of roles) {
+        if (r.rate <= 0) {
+            alert('Rate/hr for "' + r.role + '" must be greater than 0.');
+            return;
+        }
+    }
+
+    const sym = getCurrency();
+
+    // Update column headers with currency
+    document.getElementById('costHeaderRate').textContent = 'Rate/hr (' + sym + ')';
+    document.getElementById('costHeaderCost').textContent = 'Cost (' + sym + ')';
+
+    const tbody = document.getElementById('costOutputBody');
+    tbody.innerHTML = '';
+    let totalCost = 0;
+
+    roles.forEach(r => {
+        const hours = Math.round(TOTAL_HOURS * r.percentage / 100 * 10) / 10;
+        const cost = Math.round(hours * r.rate * 100) / 100;
+        totalCost += cost;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${r.role}</td>
+            <td>${r.percentage}%</td>
+            <td>${hours}</td>
+            <td>${sym}${r.rate.toFixed(2)}</td>
+            <td>${sym}${cost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('costTotalHours').textContent = TOTAL_HOURS;
+    document.getElementById('costTotalCost').textContent = sym + totalCost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('costTotalDisplay').textContent = sym + totalCost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('costOutputSection').style.display = 'block';
+
+    // Show cost export buttons
+    document.getElementById('btnExportCostExcel').style.display = '';
+    document.getElementById('btnExportCostPdf').style.display = '';
+
+    // Update ALL export links to include roles + currency
+    updateExportLinks(roles, sym);
+}
+
+function updateExportLinks(roles, currency) {
+    const param = encodeURIComponent(JSON.stringify(roles));
+    const curr = encodeURIComponent(currency);
+
+    // Update main Excel/PDF links to include cost data
+    const excelLink = document.getElementById('linkExportExcel');
+    const pdfLink = document.getElementById('linkExportPdf');
+    if (excelLink) excelLink.href = EXPORT_BASE + '/excel?roles=' + param + '&currency=' + curr;
+    if (pdfLink) pdfLink.href = EXPORT_BASE + '/pdf?roles=' + param + '&currency=' + curr;
+}
+
+function exportCostExcel() {
+    const roles = getRolesData();
+    const param = encodeURIComponent(JSON.stringify(roles));
+    const curr = encodeURIComponent(getCurrency());
+    window.location.href = EXPORT_BASE + '/excel-cost?roles=' + param + '&currency=' + curr;
+}
+
+function exportCostPdf() {
+    const roles = getRolesData();
+    const param = encodeURIComponent(JSON.stringify(roles));
+    const curr = encodeURIComponent(getCurrency());
+    window.location.href = EXPORT_BASE + '/pdf-cost?roles=' + param + '&currency=' + curr;
+}
+</script>
+{% endblock %}
