@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from mangum import Mangum
 
 from backend.routes.auth import router as auth_router
 from backend.routes.projects import router as projects_router
@@ -35,3 +36,6 @@ async def root():
 @app.exception_handler(401)
 async def unauthorized_handler(request: Request, exc):
     return RedirectResponse(url="/login", status_code=303)
+
+# Vercel handler
+handler = Mangum(app)
