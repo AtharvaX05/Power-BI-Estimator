@@ -1,12 +1,12 @@
 """Project and estimation routes."""
 import logging
 from typing import Optional
+import json
+from pathlib import Path
 
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
-from fastapi.templating import Jinja2Templates
 
-from pathlib import Path
 from backend.dependencies import project_service, auth_service
 from backend.models.project import (
     ProjectCreate, EstimationInput,
@@ -14,16 +14,10 @@ from backend.models.project import (
 )
 from backend.utils.security import decode_access_token
 from backend.utils.export import export_to_excel, export_to_pdf, export_to_excel_with_cost, export_to_pdf_with_cost
-
-import json
+from backend.utils.templates import render_template
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["projects"])
-
-# Resolve template directory absolutely
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 def _get_current_user_id(request: Request) -> Optional[str]:
@@ -55,8 +49,7 @@ async def dashboard(request: Request):
     user = auth_service.get_user(uid)
     projects = project_service.list_projects(uid)
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return render_template("dashboard.html", request, {
         "user": user,
         "projects": projects,
     })
@@ -69,7 +62,7 @@ async def new_project_page(request: Request):
     uid = _get_current_user_id(request)
     if uid is None:
         return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse("project_form.html", {"request": request, "error": None})
+    return render_template("project_form.html", request, {"error": None})
 
 
 @router.post("/projects/new", response_class=HTMLResponse)
@@ -98,8 +91,7 @@ async def project_detail(request: Request, project_id: str):
     if project is None or project.created_by != uid:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    return templates.TemplateResponse("project_detail.html", {
-        "request": request,
+    return render_template("project_detail.html", request, {
         "project": project,
     })
 
@@ -116,8 +108,7 @@ async def estimation_form(request: Request, project_id: str):
     if project is None or project.created_by != uid:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    return templates.TemplateResponse("estimation_form.html", {
-        "request": request,
+    return render_template("estimation_form.html", request, {
         "project": project,
     })
 
@@ -169,8 +160,7 @@ async def create_estimation(request: Request, project_id: str):
         )
     except (ValueError, TypeError) as e:
         logger.warning("Invalid estimation input: %s", e)
-        return templates.TemplateResponse("estimation_form.html", {
-            "request": request,
+        return render_template("estimation_form.html", request, {
             "project": project,
             "error": f"Invalid input: {e}",
         })
@@ -198,8 +188,7 @@ async def view_version(request: Request, project_id: str, version_id: str):
     if version is None:
         raise HTTPException(status_code=404, detail="Version not found")
 
-    return templates.TemplateResponse("version_detail.html", {
-        "request": request,
+    return render_template("version_detail.html", request, {
         "project": project,
         "version": version,
     })
