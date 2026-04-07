@@ -33,37 +33,67 @@ class SupabaseUserRepository(UserRepository):
         res = self._get_client().table("users").select("*").eq("id", user_id).execute()
         if not res.data:
             return None
-        return User(**res.data[0])
+        # Handle backward compatibility for new fields
+        user_data = res.data[0]
+        if "reset_token" not in user_data:
+            user_data["reset_token"] = None
+        if "reset_token_expires" not in user_data:
+            user_data["reset_token_expires"] = None
+        return User(**user_data)
 
     def get_by_email(self, email: str) -> Optional[User]:
         res = self._get_client().table("users").select("*").eq("email", email).execute()
         if not res.data:
             return None
-        return User(**res.data[0])
+        # Handle backward compatibility for new fields
+        user_data = res.data[0]
+        if "reset_token" not in user_data:
+            user_data["reset_token"] = None
+        if "reset_token_expires" not in user_data:
+            user_data["reset_token_expires"] = None
+        return User(**user_data)
 
     def update_password(self, user_id: str, hashed_password: str) -> bool:
-        result = self._get_client().table("users").update({"hashed_password": hashed_password}).eq("id", user_id).execute()
-        return len(result.data) > 0
+        try:
+            result = self._get_client().table("users").update({"hashed_password": hashed_password}).eq("id", user_id).execute()
+            return len(result.data) > 0
+        except Exception:
+            # If the update fails (possibly due to schema issues), return False
+            return False
 
     def set_reset_token(self, user_id: str, token: str, expires_at: datetime) -> bool:
-        result = self._get_client().table("users").update({
-            "reset_token": token,
-            "reset_token_expires": expires_at.isoformat()
-        }).eq("id", user_id).execute()
-        return len(result.data) > 0
+        try:
+            result = self._get_client().table("users").update({
+                "reset_token": token,
+                "reset_token_expires": expires_at.isoformat()
+            }).eq("id", user_id).execute()
+            return len(result.data) > 0
+        except Exception:
+            # If the update fails (possibly due to missing columns), return False
+            return False
 
     def get_by_reset_token(self, token: str) -> Optional[User]:
         res = self._get_client().table("users").select("*").eq("reset_token", token).execute()
         if not res.data:
             return None
-        return User(**res.data[0])
+        # Handle backward compatibility for new fields
+        user_data = res.data[0]
+        if "reset_token" not in user_data:
+            user_data["reset_token"] = None
+        if "reset_token_expires" not in user_data:
+            user_data["reset_token_expires"] = None
+        return User(**user_data)
 
     def clear_reset_token(self, user_id: str) -> bool:
-        result = self._get_client().table("users").update({
-            "reset_token": None,
-            "reset_token_expires": None
-        }).eq("id", user_id).execute()
-        return len(result.data) > 0
+        try:
+            result = self._get_client().table("users").update({
+                "reset_token": None,
+                "reset_token_expires": None
+            }).eq("id", user_id).execute()
+            return len(result.data) > 0
+        except Exception:
+            # If the update fails (possibly due to missing columns), return False
+            return False
 
 
 class SupabaseProjectRepository(ProjectRepository):

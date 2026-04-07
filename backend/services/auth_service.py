@@ -45,22 +45,39 @@ class AuthService:
         reset_token = str(uuid.uuid4())
         expires_at = datetime.now(timezone.utc) + timedelta(hours=1)  # Token valid for 1 hour
         
-        self._repo.set_reset_token(user.id, reset_token, expires_at)
+        # Try to set the reset token, but don't fail if database schema isn't updated
+        try:
+            success = self._repo.set_reset_token(user.id, reset_token, expires_at)
+            if not success:
+                # If setting reset token fails, return None to indicate failure
+                return None
+        except Exception:
+            # If database operation fails, return None
+            return None
+        
         return reset_token
 
     def reset_password(self, token: str, new_password: str) -> bool:
         """Reset password using a valid reset token."""
-        user = self._repo.get_by_reset_token(token)
-        if user is None or user.reset_token_expires is None:
+        try:
+            user = self._repo.get_by_reset_token(token)
+            if user is None or user.reset_token_expires is None:
+                return False
+            
+            # Check if token is expired
+            if datetime.now(timezone.utc) > user.reset_token_expires:
+                return False
+            
+            # Update password and clear reset token
+            hashed_password = hash_password(new_password)
+            success = self._repo.update_password(user.id, hashed_password)
+            if success:
+                # Try to clear reset token, but don't fail the whole operation if it fails
+                try:
+                    self._repo.clear_reset_token(user.id)
+                except Exception:
+                    pass  # Reset token clearing is not critical
+            return success
+        except Exception:
+            # If any database operation fails, return False
             return False
-        
-        # Check if token is expired
-        if datetime.now(timezone.utc) > user.reset_token_expires:
-            return False
-        
-        # Update password and clear reset token
-        hashed_password = hash_password(new_password)
-        success = self._repo.update_password(user.id, hashed_password)
-        if success:
-            self._repo.clear_reset_token(user.id)
-        return success

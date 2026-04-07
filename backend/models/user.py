@@ -25,3 +25,7 @@ class User(BaseModel):
     created_at: datetime
     reset_token: Optional[str] = None
     reset_token_expires: Optional[datetime] = None
+
+    class Config:
+        # Allow extra fields from database that might not be in the model
+        extra = "ignore"

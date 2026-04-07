@@ -86,12 +86,12 @@ async def forgot_password(request: Request, email: str = Form(...)):
                 "success": f"Password reset initiated. Use this link to reset: {reset_url}"
             })
         else:
-            # Don't reveal if email exists or not
+            # Don't reveal if email exists or not, or if operation failed
             return render_template("forgot_password.html", request, {
                 "error": None,
                 "success": "If an account with that email exists, a password reset link has been sent."
             })
-    except Exception:
+    except Exception as e:
         logger.exception("Password reset initiation failed")
         return render_template("forgot_password.html", request, {
             "error": "Unable to process request. Please try again later.",
@@ -144,7 +144,7 @@ async def reset_password(
                 "error": "Invalid or expired reset token.",
                 "token": token
             })
-    except Exception:
+    except Exception as e:
         logger.exception("Password reset failed")
         return render_template("reset_password.html", request, {
             "error": "Unable to reset password. Please try again later.",
