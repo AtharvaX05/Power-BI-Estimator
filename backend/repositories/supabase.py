@@ -95,6 +95,10 @@ class SupabaseUserRepository(UserRepository):
             # If the update fails (possibly due to missing columns), return False
             return False
 
+    def list_all(self) -> List[User]:
+        res = self._get_client().table("users").select("*").execute()
+        return [User(**u) for u in res.data]
+
 
 class SupabaseProjectRepository(ProjectRepository):
     """ProjectRepository implementation using Supabase."""
