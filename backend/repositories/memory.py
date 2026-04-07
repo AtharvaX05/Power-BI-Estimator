@@ -30,6 +30,35 @@ class InMemoryUserRepository(UserRepository):
                 return u
         return None
 
+    def update_password(self, user_id: str, hashed_password: str) -> bool:
+        with self._lock:
+            if user_id in self._users:
+                self._users[user_id].hashed_password = hashed_password
+                return True
+        return False
+
+    def set_reset_token(self, user_id: str, token: str, expires_at) -> bool:
+        with self._lock:
+            if user_id in self._users:
+                self._users[user_id].reset_token = token
+                self._users[user_id].reset_token_expires = expires_at
+                return True
+        return False
+
+    def get_by_reset_token(self, token: str) -> Optional[User]:
+        for u in self._users.values():
+            if u.reset_token == token:
+                return u
+        return None
+
+    def clear_reset_token(self, user_id: str) -> bool:
+        with self._lock:
+            if user_id in self._users:
+                self._users[user_id].reset_token = None
+                self._users[user_id].reset_token_expires = None
+                return True
+        return False
+
     def list_all(self) -> List[User]:
         return list(self._users.values())
 

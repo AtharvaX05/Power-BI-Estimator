@@ -41,9 +41,29 @@ class SupabaseUserRepository(UserRepository):
             return None
         return User(**res.data[0])
 
-    def list_all(self) -> List[User]:
-        res = self._get_client().table("users").select("*").execute()
-        return [User(**u) for u in res.data]
+    def update_password(self, user_id: str, hashed_password: str) -> bool:
+        result = self._get_client().table("users").update({"hashed_password": hashed_password}).eq("id", user_id).execute()
+        return len(result.data) > 0
+
+    def set_reset_token(self, user_id: str, token: str, expires_at: datetime) -> bool:
+        result = self._get_client().table("users").update({
+            "reset_token": token,
+            "reset_token_expires": expires_at.isoformat()
+        }).eq("id", user_id).execute()
+        return len(result.data) > 0
+
+    def get_by_reset_token(self, token: str) -> Optional[User]:
+        res = self._get_client().table("users").select("*").eq("reset_token", token).execute()
+        if not res.data:
+            return None
+        return User(**res.data[0])
+
+    def clear_reset_token(self, user_id: str) -> bool:
+        result = self._get_client().table("users").update({
+            "reset_token": None,
+            "reset_token_expires": None
+        }).eq("id", user_id).execute()
+        return len(result.data) > 0
 
 
 class SupabaseProjectRepository(ProjectRepository):

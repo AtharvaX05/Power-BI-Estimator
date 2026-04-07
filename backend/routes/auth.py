@@ -66,3 +66,87 @@ async def logout():
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie("access_token")
     return response
+
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    return render_template("forgot_password.html", request, {"error": None, "success": None})
+
+
+@router.post("/forgot-password", response_class=HTMLResponse)
+async def forgot_password(request: Request, email: str = Form(...)):
+    try:
+        reset_token = auth_service.initiate_password_reset(email)
+        if reset_token:
+            # In production, send email with reset link
+            # For demo purposes, show the token directly
+            reset_url = f"/reset-password?token={reset_token}"
+            return render_template("forgot_password.html", request, {
+                "error": None,
+                "success": f"Password reset initiated. Use this link to reset: {reset_url}"
+            })
+        else:
+            # Don't reveal if email exists or not
+            return render_template("forgot_password.html", request, {
+                "error": None,
+                "success": "If an account with that email exists, a password reset link has been sent."
+            })
+    except Exception:
+        logger.exception("Password reset initiation failed")
+        return render_template("forgot_password.html", request, {
+            "error": "Unable to process request. Please try again later.",
+            "success": None
+        })
+
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request, token: str = None):
+    if not token:
+        return render_template("reset_password.html", request, {
+            "error": "Invalid reset link.",
+            "token": None
+        })
+    return render_template("reset_password.html", request, {
+        "error": None,
+        "token": token
+    })
+
+
+@router.post("/reset-password", response_class=HTMLResponse)
+async def reset_password(
+    request: Request,
+    token: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...)
+):
+    if new_password != confirm_password:
+        return render_template("reset_password.html", request, {
+            "error": "Passwords do not match.",
+            "token": token
+        })
+    
+    if len(new_password) < 6:
+        return render_template("reset_password.html", request, {
+            "error": "Password must be at least 6 characters long.",
+            "token": token
+        })
+    
+    try:
+        success = auth_service.reset_password(token, new_password)
+        if success:
+            return render_template("reset_password.html", request, {
+                "error": None,
+                "token": None,
+                "success": "Password reset successfully. You can now log in with your new password."
+            })
+        else:
+            return render_template("reset_password.html", request, {
+                "error": "Invalid or expired reset token.",
+                "token": token
+            })
+    except Exception:
+        logger.exception("Password reset failed")
+        return render_template("reset_password.html", request, {
+            "error": "Unable to reset password. Please try again later.",
+            "token": token
+        })

@@ -11,10 +11,9 @@ class UserCreate(BaseModel):
     password: str
 
 
-class UserLogin(BaseModel):
-    """Schema for user login."""
-    email: EmailStr
-    password: str
+class UserUpdate(BaseModel):
+    """Schema for updating user password."""
+    hashed_password: str
 
 
 class User(BaseModel):
@@ -24,3 +23,5 @@ class User(BaseModel):
     email: EmailStr
     hashed_password: str
     created_at: datetime
+    reset_token: Optional[str] = None
+    reset_token_expires: Optional[datetime] = None
