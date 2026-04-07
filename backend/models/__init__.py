@@ -1,4 +1,4 @@
-from backend.models.user import User, UserCreate, UserLogin
+from backend.models.user import User, UserCreate, UserUpdate
 from backend.models.project import (
     Project,
     ProjectCreate,
@@ -10,7 +10,7 @@ from backend.models.project import (
 )
 
 __all__ = [
-    "User", "UserCreate", "UserLogin",
+    "User", "UserCreate", "UserUpdate",
     "Project", "ProjectCreate",
     "EstimationInput", "EstimationOutput",
     "ProjectVersion", "ModuleEffort",
