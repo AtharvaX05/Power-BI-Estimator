@@ -14,16 +14,13 @@ class SupabaseUserRepository(UserRepository):
     """UserRepository implementation using Supabase."""
 
     def __init__(self) -> None:
-        if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
-             # In a real app we might raise an error, but here we just initialize empty to avoid crashes if keys aren't set yet during dev
-             self._client = None
-        else:
-            self._client: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        self._supabase_url = settings.SUPABASE_URL
+        self._supabase_key = settings.SUPABASE_KEY
 
     def _get_client(self) -> Client:
-        if self._client is None:
+        if not self._supabase_url or not self._supabase_key:
             raise ValueError("Supabase credentials not configured. Please set SUPABASE_URL and SUPABASE_KEY in .env")
-        return self._client
+        return create_client(self._supabase_url, self._supabase_key)
 
     def create(self, user: User) -> User:
         data = user.model_dump()
@@ -53,15 +50,13 @@ class SupabaseProjectRepository(ProjectRepository):
     """ProjectRepository implementation using Supabase."""
 
     def __init__(self) -> None:
-        if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
-            self._client = None
-        else:
-            self._client: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        self._supabase_url = settings.SUPABASE_URL
+        self._supabase_key = settings.SUPABASE_KEY
 
     def _get_client(self) -> Client:
-        if self._client is None:
+        if not self._supabase_url or not self._supabase_key:
             raise ValueError("Supabase credentials not configured. Please set SUPABASE_URL and SUPABASE_KEY in .env")
-        return self._client
+        return create_client(self._supabase_url, self._supabase_key)
 
     def create(self, project: Project) -> Project:
         data = project.model_dump(exclude={"versions"})

@@ -18,7 +18,14 @@ async def login_page(request: Request):
 
 @router.post("/login", response_class=HTMLResponse)
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
-    token = auth_service.login(email, password)
+    try:
+        token = auth_service.login(email, password)
+    except Exception as exc:
+        logger.exception("Login failed due to backend error")
+        return render_template("login.html", request, {
+            "error": "Unable to authenticate right now. Please try again later.",
+        })
+
     if token is None:
         return render_template("login.html", request, {"error": "Invalid email or password."})
 
